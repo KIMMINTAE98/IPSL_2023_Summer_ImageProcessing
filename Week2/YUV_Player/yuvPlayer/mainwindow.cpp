@@ -46,17 +46,17 @@ void YUV420_to_444(BYTE** Y, BYTE** U, BYTE** V, BYTE** img_out, int width, int 
     {
         for (int j = 0; j < width / 2; j++)
         {
-            img_out[i           ][j            ] = Y[i             ][j            ];
+            img_out[i           ][j            ] = Y[i             ][j            ];    // Y
             img_out[i           ][j + width / 2] = Y[i             ][j + width / 2];
             img_out[i+height / 2][j            ] = Y[i + height / 2][j            ];
             img_out[i+height / 2][j + width / 2] = Y[i + height / 2][j + width / 2];
 
-            img_out[2 * i + height    ][2 * j    ] = U[i][j];
+            img_out[2 * i + height    ][2 * j    ] = U[i][j];                           // U
             img_out[2 * i + height    ][2 * j + 1] = U[i][j];
             img_out[2 * i + height + 1][2 * j    ] = U[i][j];
             img_out[2 * i + height + 1][2 * j + 1] = U[i][j];
 
-            img_out[2 * i + 2*height    ][2 * j    ] = V[i][j];
+            img_out[2 * i + 2*height    ][2 * j    ] = V[i][j];                         // V
             img_out[2 * i + 2*height    ][2 * j + 1] = V[i][j];
             img_out[2 * i + 2*height + 1][2 * j    ] = V[i][j];
             img_out[2 * i + 2*height + 1][2 * j + 1] = V[i][j];
@@ -80,13 +80,13 @@ void MainWindow::initUI()
 {
     this->resize(1440, 810);
 
-    // setup menubar
+    // menubar 셋팅
     fileMenu = menuBar()->addMenu("&File");
 
-    // setup toolbar
+    // toolbar 셋팅
     fileToolBar = addToolBar("File");
 
-    // image Info UI
+    // image Info UI 셋팅
     imgInfoGroupBox = new QGroupBox("Input Image Info", this);
     imgInfoVBoxLayout = new QVBoxLayout;
 
@@ -119,13 +119,13 @@ void MainWindow::initUI()
     imgInfoGroupBox->setLayout(imgInfoVBoxLayout);
     imgInfoGroupBox->setGeometry(20, 70, 200, 200);
 
-    // image display area
+    // image 출력부 UI 셋팅
     imgLabel = new QLabel(this);
     imgArea = new QScrollArea(this);
     imgArea->setGeometry(240, 80, 540, 540);
     imgArea->setWidget(imgLabel);
 
-    // font seting
+    // font 설정
     QFont boldFont;
     boldFont.setBold(true);
     sizeLabel[0]->setFont(boldFont);
@@ -136,13 +136,13 @@ void MainWindow::initUI()
 
 void MainWindow::createActions()
 {
-    // create actions & add them to menus
+    // menubar에 action 생성 및 추가
     openAction = new QAction("&Open", this);
     fileMenu->addAction(openAction);
     exitAction = new QAction("E&xit", this);
     fileMenu->addAction(exitAction);
 
-    // add actions to toolbars
+    // toolbar에 action 추가
     fileToolBar->addAction(openAction);
 
     // connect the signals and slots
@@ -152,6 +152,7 @@ void MainWindow::createActions()
 
 void MainWindow::openImage()
 {
+    // 입력 이미지 사이즈 저장
     QString w = sizeLineEdit[0]->text();
     QString h = sizeLineEdit[1]->text();
     int imgWidth  = w.toInt();
@@ -162,6 +163,7 @@ void MainWindow::openImage()
         return;
     }
 
+    // 입력 이미지 format 저장
     int type = 1;
     if (formatRadioButtion[0]->isChecked())
         type = 0;
@@ -174,6 +176,7 @@ void MainWindow::openImage()
         return;
     }
 
+    // 입력 이미지 파일 오픈
     QString fileName = QFileDialog::getOpenFileName(this,"Open Image",QDir::homePath()); // filedialog 띄우기
     QFile file(fileName);
     if(!file.open(QFile::ReadOnly))
@@ -182,10 +185,11 @@ void MainWindow::openImage()
         return;
     }
 
-    // bitstream 읽어오기
+    // 입력 이미지 파일 bitstream 읽어오기
     QByteArray arr = file.readAll();
     uchar* data = (uchar*)arr.constData();
 
+    /* YUV 444 format인 경우 */
     if (type == 0) {
 
         // buffer 선언
@@ -201,7 +205,8 @@ void MainWindow::openImage()
                 yuv444[i][j] = data[i * imgWidth + j];
             }
         }
-        YUV444_to_RGB(yuv444, rgb, imgWidth, imgHeight);                 // yuv444torgb
+
+        YUV444_to_RGB(yuv444, rgb, imgWidth, imgHeight);
 
         // rgb rgb rgb ... 형태로 변환
         for(int i=0; i<imgHeight; i++)
@@ -216,9 +221,11 @@ void MainWindow::openImage()
 
         // image display
         QPixmap pix = QPixmap::fromImage(QImage(output,imgWidth,imgHeight,QImage::Format_RGB888));
-        imgLabel->setPixmap(pix.scaled(imgWidth, imgHeight, Qt::KeepAspectRatio));
+        imgLabel->setPixmap(pix);
         imgLabel->setGeometry(0, 0, imgWidth, imgHeight);
+
     }
+    /* YUV 420 format인 경우 */
     else if (type == 1) {
 
         // buffer 선언
@@ -230,7 +237,7 @@ void MainWindow::openImage()
         uchar** rgb    = MemAlloc_2D(imgWidth, 3 * imgHeight);
         uchar* output  = (BYTE*)malloc(sizeof(BYTE) * imgWidth * imgHeight * 3);
 
-        //y 성분 저장
+        // y 성분 저장
         for(int i=0; i<imgHeight; i++)
         {
             for(int j=0; j<imgWidth; j++)
@@ -238,7 +245,7 @@ void MainWindow::openImage()
                 img_Y[i][j] = data[i*imgWidth + j];
             }
         }
-        //u,v 성분 저장
+        // u,v 성분 저장
         for(int i=0; i<imgHeight/2; i++)
         {
             for(int j=0; j<imgWidth/2; j++)
@@ -248,8 +255,8 @@ void MainWindow::openImage()
             }
         }
 
-        YUV420_to_444(img_Y, img_U, img_V, yuv444, imgWidth, imgHeight); // yuv420to444
-        YUV444_to_RGB(yuv444, rgb, imgWidth, imgHeight);                 // yuv444torgb
+        YUV420_to_444(img_Y, img_U, img_V, yuv444, imgWidth, imgHeight);
+        YUV444_to_RGB(yuv444, rgb, imgWidth, imgHeight);
 
         // rgb rgb rgb ... 형태로 변환
         for(int i=0; i<imgHeight; i++)
@@ -264,16 +271,18 @@ void MainWindow::openImage()
 
         // image display
         QPixmap pix = QPixmap::fromImage(QImage(output,imgWidth,imgHeight,QImage::Format_RGB888));
-        imgLabel->setPixmap(pix.scaled(imgWidth, imgHeight, Qt::KeepAspectRatio));
+        imgLabel->setPixmap(pix);
         imgLabel->setGeometry(0, 0, imgWidth, imgHeight);
+
     }
+    /* YUV 400 format인 경우 */
     else if (type == 2) {
 
         // image display
         QPixmap pix = QPixmap::fromImage(QImage(data,imgWidth,imgHeight,QImage::Format_Grayscale8));
         imgLabel->setPixmap(pix);
-        ///imgLabel->setPixmap(pix.scaled(imgWidth, imgHeight, Qt::KeepAspectRatio));
         imgLabel->setGeometry(0, 0, imgWidth, imgHeight);
+
     }
     else {
         QMessageBox::warning(this,"Error","invalid image format!");
